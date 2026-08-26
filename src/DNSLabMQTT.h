@@ -2,6 +2,7 @@
 #define DNSLAB_MQTT_H
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
 
 #include <functional>
