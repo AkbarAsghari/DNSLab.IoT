@@ -1,0 +1,15 @@
+DNSLab	KEYWORD1
+DNSLabMQTT	KEYWORD1
+
+begin	KEYWORD2
+loop	KEYWORD2
+connected	KEYWORD2
+disconnect	KEYWORD2
+
+publish	KEYWORD2
+subscribe	KEYWORD2
+unsubscribe	KEYWORD2
+onMessage	KEYWORD2
+
+setCredentials	KEYWORD2
+setClientId	KEYWORD2
