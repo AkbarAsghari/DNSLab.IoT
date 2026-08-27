@@ -2,8 +2,6 @@
 
 #if defined(ESP32)
 
-#include <WiFi.h>
-
 DNSLabMQTT* DNSLabMQTT::_instance = nullptr;
 
 DNSLabMQTT::DNSLabMQTT()
@@ -15,6 +13,7 @@ DNSLabMQTT::DNSLabMQTT()
       _password(nullptr),
       _clientId(nullptr),
       _messageCallback(nullptr),
+      _debug(true),
       _lastConnectAttempt(0),
       _reconnectInterval(5000) {
 
@@ -37,6 +36,10 @@ void DNSLabMQTT::begin(
         _host,
         _port
     );
+
+    debug(
+        "[DNSLab] MQTT initialized"
+    );
 }
 
 void DNSLabMQTT::loop() {
@@ -45,11 +48,19 @@ void DNSLabMQTT::loop() {
         return;
     }
 
+    // --------------------------------
+    // MQTT reconnect
+    // --------------------------------
+
     if (!_mqttClient.connected()) {
 
         unsigned long now = millis();
 
-        if (now - _lastConnectAttempt >= _reconnectInterval) {
+        if (
+            now - _lastConnectAttempt >=
+            _reconnectInterval
+        ) {
+
             connect();
         }
 
@@ -80,11 +91,15 @@ bool DNSLabMQTT::connect() {
 
     _lastConnectAttempt = millis();
 
+    debug(
+        "[DNSLab] Connecting to MQTT..."
+    );
+
     bool result = false;
 
-    // -------------------------
-    // Username / Password
-    // -------------------------
+    // --------------------------------
+    // Authenticated connection
+    // --------------------------------
 
     if (_username && _password) {
 
@@ -107,9 +122,9 @@ bool DNSLabMQTT::connect() {
 
     } else {
 
-        // -------------------------
-        // Anonymous Connection
-        // -------------------------
+        // --------------------------------
+        // Anonymous connection
+        // --------------------------------
 
         if (_clientId) {
 
@@ -125,12 +140,36 @@ bool DNSLabMQTT::connect() {
         }
     }
 
+    if (result) {
+
+        debug(
+            "[DNSLab] MQTT connected"
+        );
+
+    } else {
+
+        if (_debug) {
+
+            Serial.print(
+                "[DNSLab] MQTT connection failed. State: "
+            );
+
+            Serial.println(
+                _mqttClient.state()
+            );
+        }
+    }
+
     return result;
 }
 
 void DNSLabMQTT::disconnect() {
 
     _mqttClient.disconnect();
+
+    debug(
+        "[DNSLab] MQTT disconnected"
+    );
 }
 
 bool DNSLabMQTT::publish(
@@ -175,9 +214,33 @@ bool DNSLabMQTT::subscribe(
         return false;
     }
 
-    return _mqttClient.subscribe(
-        topic
-    );
+    bool result =
+        _mqttClient.subscribe(topic);
+
+    if (result) {
+
+        if (_debug) {
+
+            Serial.print(
+                "[DNSLab] Subscribed: "
+            );
+
+            Serial.println(topic);
+        }
+
+    } else {
+
+        if (_debug) {
+
+            Serial.print(
+                "[DNSLab] Subscribe failed: "
+            );
+
+            Serial.println(topic);
+        }
+    }
+
+    return result;
 }
 
 bool DNSLabMQTT::unsubscribe(
@@ -220,6 +283,13 @@ void DNSLabMQTT::setClientId(
     _clientId = clientId;
 }
 
+void DNSLabMQTT::setDebug(
+    bool enabled
+) {
+
+    _debug = enabled;
+}
+
 void DNSLabMQTT::mqttCallback(
     char* topic,
     byte* payload,
@@ -250,8 +320,14 @@ void DNSLabMQTT::handleMessage(
 
     message.reserve(length);
 
-    for (unsigned int i = 0; i < length; i++) {
-        message += (char)payload[i];
+    for (
+        unsigned int i = 0;
+        i < length;
+        i++
+    ) {
+
+        message +=
+            (char)payload[i];
     }
 
     _messageCallback(
@@ -260,8 +336,19 @@ void DNSLabMQTT::handleMessage(
     );
 }
 
+void DNSLabMQTT::debug(
+    const char* message
+) {
+
+    if (!_debug) {
+        return;
+    }
+
+    Serial.println(message);
+}
+
 #else
 
-#error "DNSLab v0.1.0 currently supports ESP32 only."
+#error "DNSLab currently supports ESP32 only."
 
 #endif

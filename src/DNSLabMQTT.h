@@ -8,11 +8,16 @@
 #include <functional>
 
 class DNSLabMQTT {
+
 public:
 
-    using MessageCallback = std::function<
-        void(const char* topic, const char* message)
-    >;
+    using MessageCallback =
+        std::function<
+            void(
+                const char* topic,
+                const char* message
+            )
+        >;
 
     DNSLabMQTT();
 
@@ -60,22 +65,30 @@ public:
         const char* clientId
     );
 
+    void setDebug(bool enabled);
+
 private:
 
     WiFiClient _wifiClient;
+
     PubSubClient _mqttClient;
 
     const char* _host;
+
     uint16_t _port;
 
     const char* _username;
+
     const char* _password;
 
     const char* _clientId;
 
     MessageCallback _messageCallback;
 
+    bool _debug;
+
     unsigned long _lastConnectAttempt;
+
     unsigned long _reconnectInterval;
 
     static DNSLabMQTT* _instance;
@@ -90,6 +103,10 @@ private:
         char* topic,
         byte* payload,
         unsigned int length
+    );
+
+    void debug(
+        const char* message
     );
 };
 
