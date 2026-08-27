@@ -1,118 +1,150 @@
 #include <DNSLab.h>
 
-DNSLab dns;
+DNSLab dnslab;
 
-// -------------------------
+
+// ==================================================
 // WiFi
-// -------------------------
+// ==================================================
 
 const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// -------------------------
-// DNSLab MQTT
-// -------------------------
 
-const char* MQTT_HOST = "dnslab.link";
-const uint16_t MQTT_PORT = 1883;
+// ==================================================
+// MQTT
+// ==================================================
 
-// -------------------------
-// Topics
-// -------------------------
+const char* TENANT_ID = "Project1";
+const char* DEVICE_ID = "Device456";
 
-const char* SUBSCRIBE_TOPIC = "Notification";
-const char* PUBLISH_TOPIC = "Notification";
 
-unsigned long lastPublish = 0;
+// ==================================================
+// Setup
+// ==================================================
 
-void setup() {
-
+void setup()
+{
     Serial.begin(115200);
 
+    delay(1000);
+
     Serial.println();
-    Serial.println("======================");
-    Serial.println("DNSLab IoT");
-    Serial.println("MQTT Example");
-    Serial.println("======================");
+    Serial.println("==============================");
+    Serial.println("DNSLab IoT - MQTT Example");
+    Serial.println("==============================");
 
-    // -------------------------
+
+    // ==================================================
     // DNSLab
-    // -------------------------
+    //
+    // Default MQTT Server:
+    // mqtt.dnslab.ir:1883
+    // ==================================================
 
-    dns.begin(
+    dnslab.begin();
+
+
+    // ==================================================
+    // WiFi
+    // ==================================================
+
+    dnslab.Wifi.begin(
         WIFI_SSID,
-        WIFI_PASSWORD,
-        MQTT_HOST,
-        MQTT_PORT
+        WIFI_PASSWORD
     );
 
-    // -------------------------
-    // MQTT Callback
-    // -------------------------
 
-    dns.mqtt.onMessage(
-        [](const char* topic, const char* message) {
+    // ==================================================
+    // MQTT
+    // ==================================================
 
-            Serial.println();
-            Serial.println("----- MQTT Message -----");
+    dnslab.MQTT.begin(
+        TENANT_ID,
+        DEVICE_ID
+    );
 
-            Serial.print("Topic: ");
-            Serial.println(topic);
 
-            Serial.print("Message: ");
-            Serial.println(message);
+    // ==================================================
+    // MQTT Buffer
+    // ==================================================
 
-            Serial.println("------------------------");
-        }
+    dnslab.MQTT.setBufferSize(
+        2048
     );
 }
 
-void loop() {
 
-    dns.loop();
+// ==================================================
+// Loop
+// ==================================================
 
-    // -------------------------
-    // Subscribe
-    // -------------------------
+void loop()
+{
+    dnslab.loop();
 
-    static bool subscribed = false;
 
-    if (dns.mqtt.connected() && !subscribed) {
+    // ==================================================
+    // Connection Status
+    // ==================================================
 
-        if (dns.mqtt.subscribe(SUBSCRIBE_TOPIC)) {
+    static unsigned long lastPrint = 0;
 
-            subscribed = true;
+    if (
+        millis() - lastPrint >= 3000
+    )
+    {
+        lastPrint = millis();
 
-            Serial.print("Subscribed to: ");
-            Serial.println(SUBSCRIBE_TOPIC);
+
+        // -----------------------------
+        // WiFi
+        // -----------------------------
+
+        Serial.print(
+            "[DNSLab] WiFi: "
+        );
+
+        if (
+            dnslab.Wifi.connected()
+        )
+        {
+            Serial.println(
+                "Connected"
+            );
         }
-    }
-
-    // -------------------------
-    // Publish every 10 seconds
-    // -------------------------
-
-    if (dns.mqtt.connected()) {
-
-        if (millis() - lastPublish >= 10000) {
-
-            lastPublish = millis();
-
-            if (dns.mqtt.publish(
-                    PUBLISH_TOPIC,
-                    "Hello from DNSLab ESP32!"
-                )) {
-
-                Serial.println(
-                    "MQTT message published."
-                );
-            }
+        else
+        {
+            Serial.println(
+                "Disconnected"
+            );
         }
-    } else {
 
-        // Allow Subscribe again
-        // after MQTT reconnect.
 
-        subscribed = false;
+        // -----------------------------
+        // MQTT
+        // -----------------------------
+
+        Serial.print(
+            "[DNSLab] MQTT: "
+        );
+
+        if (
+            dnslab.MQTT.connected()
+        )
+        {
+            Serial.println(
+                "Connected"
+            );
+        }
+        else
+        {
+            Serial.println(
+                "Disconnected"
+            );
+        }
+
+
+        Serial.println();
     }
 }

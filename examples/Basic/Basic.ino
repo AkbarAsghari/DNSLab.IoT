@@ -1,39 +1,25 @@
 #include <DNSLab.h>
 
-DNSLab dns;
+DNSLab dnslab;
 
-const char* WIFI_SSID = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-
-void setup() {
-
+void setup()
+{
     Serial.begin(115200);
 
-    Serial.println();
-    Serial.println("DNSLab Basic Example");
+    dnslab.begin();
 
-    dns.begin(
-        WIFI_SSID,
-        WIFI_PASSWORD
+    dnslab.Wifi.begin(
+        "YOUR_WIFI_NAME",
+        "YOUR_WIFI_PASSWORD"
+    );
+
+    dnslab.MQTT.begin(
+        "Project1",
+        "Device456"
     );
 }
 
-void loop() {
-
-    dns.loop();
-
-    static unsigned long lastPrint = 0;
-
-    if (millis() - lastPrint >= 3000) {
-
-        lastPrint = millis();
-
-        Serial.print("WiFi: ");
-
-        if (dns.wifiConnected()) {
-            Serial.println("Connected");
-        } else {
-            Serial.println("Disconnected");
-        }
-    }
+void loop()
+{
+    dnslab.loop();
 }
