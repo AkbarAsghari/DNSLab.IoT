@@ -6,19 +6,31 @@
 #include <vector>
 #include <functional>
 
+
+// ==================================================
+// PLATFORM
+// ==================================================
+
 #if defined(ESP32)
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #elif defined(ESP8266)
 
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
 
 #else
 
 #error "DNSLab.IoT supports ESP32 and ESP8266 only."
 
 #endif
+
+
+// ==================================================
+// MQTT
+// ==================================================
 
 #include <PubSubClient.h>
 
@@ -131,19 +143,36 @@ public:
 
 private:
 
+    // ==================================================
+    // SECURE WIFI CLIENT
+    // ==================================================
+
     #if defined(ESP32) || defined(ESP8266)
 
-    WiFiClient _wifiClient;
+    WiFiClientSecure _wifiClient;
 
     #endif
 
+
+    // ==================================================
+    // MQTT CLIENT
+    // ==================================================
+
     PubSubClient _mqttClient;
 
+
+    // ==================================================
+    // CONNECTION
+    // ==================================================
 
     String _host;
 
     uint16_t _port;
 
+
+    // ==================================================
+    // DEVICE
+    // ==================================================
 
     String _tenantId;
 
@@ -152,6 +181,10 @@ private:
     String _clientId;
 
 
+    // ==================================================
+    // STATE
+    // ==================================================
+
     bool _started;
 
     bool _subscriptionsRestored;
@@ -159,16 +192,32 @@ private:
     bool _debug;
 
 
+    // ==================================================
+    // RECONNECT
+    // ==================================================
+
     unsigned long _lastConnectAttempt;
 
     unsigned long _reconnectInterval;
 
 
+    // ==================================================
+    // SUBSCRIPTIONS
+    // ==================================================
+
     std::vector<String> _subscriptions;
 
 
+    // ==================================================
+    // CALLBACK
+    // ==================================================
+
     MessageCallback _messageCallback;
 
+
+    // ==================================================
+    // SINGLETON INSTANCE
+    // ==================================================
 
     static DNSLabMQTT* _instance;
 

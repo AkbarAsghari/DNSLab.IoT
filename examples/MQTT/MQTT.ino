@@ -39,7 +39,7 @@ void setup()
     // DNSLab
     //
     // Default MQTT Server:
-    // mqtt.dnslab.ir:1883
+    // mqtt.dnslab.ir:8883
     // ==================================================
 
     dnslab.begin();

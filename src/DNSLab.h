@@ -13,7 +13,7 @@ public:
     DNSLab();
 
     // Default:
-    // mqtt.dnslab.ir:1883
+    // mqtt.dnslab.ir:8883
     void begin();
 
     // Custom MQTT server

@@ -1,5 +1,5 @@
 #include "DNSLabMQTT.h"
-
+#include "DNSLabCA.h"
 
 DNSLabMQTT*
 DNSLabMQTT::_instance = nullptr;
@@ -17,7 +17,7 @@ DNSLabMQTT::DNSLabMQTT()
     : _mqttClient(),
 #endif
       _host("mqtt.dnslab.ir"),
-      _port(1883),
+      _port(8883),
       _tenantId(),
       _deviceId(),
       _clientId(),
@@ -30,6 +30,14 @@ DNSLabMQTT::DNSLabMQTT()
       _messageCallback(nullptr)
 {
     _instance = this;
+
+#if defined(ESP32) || defined(ESP8266)
+
+    _wifiClient.setCACert(
+        DNSLAB_ROOT_CA
+    );
+
+#endif
 
     _mqttClient.setCallback(
         DNSLabMQTT::mqttCallback

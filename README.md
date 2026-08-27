@@ -139,7 +139,7 @@ mqtt.dnslab.ir
 Default port:
 
 ```
-1883
+8883
 ```
 
 ---
@@ -151,7 +151,7 @@ The default server can be changed:
 ```
 dnslab.begin(
     "mqtt.example.com",
-    1883
+    8883
 );
 ```
 
@@ -160,7 +160,7 @@ For example:
 ```
 dnslab.begin(
     "mqtt.dnslab.ir",
-    1883
+    8883
 );
 ```
 
@@ -173,7 +173,7 @@ dnslab.begin();
 the library uses:
 
 ```
-mqtt.dnslab.ir:1883
+mqtt.dnslab.ir:8883
 ```
 
 ---
@@ -551,7 +551,7 @@ void setup()
     delay(1000);
 
     // Default:
-    // mqtt.dnslab.ir:1883
+    // mqtt.dnslab.ir:8883
 
     dnslab.begin();
 

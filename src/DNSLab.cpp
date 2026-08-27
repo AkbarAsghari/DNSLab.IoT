@@ -9,7 +9,7 @@ DNSLab::DNSLab()
     : Wifi(),
       MQTT(),
       _mqttHost("mqtt.dnslab.ir"),
-      _mqttPort(1883),
+      _mqttPort(8883),
       _started(false),
       _debug(true)
 {
@@ -24,7 +24,7 @@ void DNSLab::begin()
 {
     begin(
         "mqtt.dnslab.ir",
-        1883
+        8883
     );
 }
 
