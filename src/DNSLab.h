@@ -2,8 +2,8 @@
 #define DNSLAB_H
 
 #include <Arduino.h>
-#include <WiFi.h>
 
+#include "DNSLabWifi.h"
 #include "DNSLabMQTT.h"
 
 class DNSLab
@@ -12,41 +12,36 @@ public:
 
     DNSLab();
 
-    bool begin(
-        const char* wifiSSID,
-        const char* wifiPassword,
-        const char* tenantId,
-        const char* deviceId
+    // Default:
+    // mqtt.dnslab.ir:1883
+    void begin();
+
+    // Custom MQTT server
+    void begin(
+        const char* host,
+        uint16_t port
     );
 
     void loop();
 
-    bool connected();
+    void setDebug(
+        bool enabled
+    );
 
-    bool wifiConnected();
-
-    void disconnect();
-
-    void setDebug(bool enabled);
-
-    DNSLabMQTT mqtt;
+    DNSLabWifi Wifi;
+    DNSLabMQTT MQTT;
 
 private:
 
-    const char* _wifiSSID;
-    const char* _wifiPassword;
+    String _mqttHost;
 
-    bool _wifiStarted;
+    uint16_t _mqttPort;
 
-    unsigned long _lastWiFiAttempt;
+    bool _started;
 
-    unsigned long _wifiRetryInterval;
+    bool _debug;
 
-    void connectWiFi();
-
-    void printDebug(
-        const char* message
-    );
+    void configureMQTT();
 };
 
 #endif

@@ -2,11 +2,26 @@
 #define DNSLAB_MQTT_H
 
 #include <Arduino.h>
+
+#include <vector>
+#include <functional>
+
+#if defined(ESP32)
+
 #include <WiFi.h>
+
+#elif defined(ESP8266)
+
+#include <ESP8266WiFi.h>
+
+#else
+
+#error "DNSLab.IoT supports ESP32 and ESP8266 only."
+
+#endif
+
 #include <PubSubClient.h>
 
-#include <functional>
-#include <vector>
 
 class DNSLabMQTT
 {
@@ -20,21 +35,55 @@ public:
             )
         >;
 
+
     DNSLabMQTT();
 
-    void begin();
+
+    // ==================================================
+    // SERVER
+    // ==================================================
+
+    void setServer(
+        const char* host,
+        uint16_t port
+    );
+
+
+    // ==================================================
+    // BEGIN
+    // ==================================================
+
+    void begin(
+        const char* tenantId,
+        const char* deviceId
+    );
+
+
+    // ==================================================
+    // MQTT
+    // ==================================================
 
     void loop();
 
-    bool connected();
-
     bool connect();
+
+    bool connected();
 
     void disconnect();
 
-    // --------------------------------
-    // Publish
-    // --------------------------------
+
+    // ==================================================
+    // BUFFER SIZE
+    // ==================================================
+
+    void setBufferSize(
+        uint16_t size
+    );
+
+
+    // ==================================================
+    // PUBLISH
+    // ==================================================
 
     bool publish(
         const char* topic,
@@ -46,9 +95,10 @@ public:
         const String& message
     );
 
-    // --------------------------------
-    // Subscribe
-    // --------------------------------
+
+    // ==================================================
+    // SUBSCRIBE
+    // ==================================================
 
     bool subscribe(
         const char* topic
@@ -58,17 +108,19 @@ public:
         const char* topic
     );
 
-    // --------------------------------
-    // Callback
-    // --------------------------------
+
+    // ==================================================
+    // CALLBACK
+    // ==================================================
 
     void onMessage(
         MessageCallback callback
     );
 
-    // --------------------------------
-    // Debug
-    // --------------------------------
+
+    // ==================================================
+    // DEBUG
+    // ==================================================
 
     void setDebug(
         bool enabled
@@ -76,81 +128,54 @@ public:
 
     bool debugEnabled();
 
-    // --------------------------------
-    // Identity
-    // --------------------------------
-
-    void setTenantId(
-        const char* tenantId
-    );
-
-    void setDeviceId(
-        const char* deviceId
-    );
 
 private:
 
-    // --------------------------------
-    // MQTT
-    // --------------------------------
+    #if defined(ESP32) || defined(ESP8266)
 
     WiFiClient _wifiClient;
 
+    #endif
+
     PubSubClient _mqttClient;
 
-    const char* _host;
+
+    String _host;
 
     uint16_t _port;
 
-    // --------------------------------
-    // Identity
-    // --------------------------------
 
-    const char* _tenantId;
+    String _tenantId;
 
-    const char* _deviceId;
+    String _deviceId;
 
     String _clientId;
 
-    // --------------------------------
-    // Callback
-    // --------------------------------
 
-    MessageCallback _messageCallback;
+    bool _started;
 
-    // --------------------------------
-    // Debug
-    // --------------------------------
+    bool _subscriptionsRestored;
 
     bool _debug;
 
-    // --------------------------------
-    // State
-    // --------------------------------
-
-    bool _mqttStarted;
-
-    bool _subscriptionsRestored;
 
     unsigned long _lastConnectAttempt;
 
     unsigned long _reconnectInterval;
 
-    // --------------------------------
-    // Subscriptions
-    // --------------------------------
 
     std::vector<String> _subscriptions;
 
-    // --------------------------------
-    // Singleton callback
-    // --------------------------------
+
+    MessageCallback _messageCallback;
+
 
     static DNSLabMQTT* _instance;
 
-    // --------------------------------
-    // MQTT callback
-    // --------------------------------
+
+    // ==================================================
+    // INTERNAL
+    // ==================================================
 
     static void mqttCallback(
         char* topic,
@@ -158,39 +183,29 @@ private:
         unsigned int length
     );
 
+
     void handleMessage(
         char* topic,
         byte* payload,
         unsigned int length
     );
 
-    // --------------------------------
-    // Topic
-    // --------------------------------
 
     String buildTopic(
         const char* topic
     );
 
-    // --------------------------------
-    // Subscription manager
-    // --------------------------------
 
     void restoreSubscriptions();
+
 
     bool subscriptionExists(
         const char* topic
     );
 
-    // --------------------------------
-    // Client ID
-    // --------------------------------
 
     void generateClientId();
 
-    // --------------------------------
-    // Debug
-    // --------------------------------
 
     void debug(
         const char* message

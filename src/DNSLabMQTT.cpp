@@ -1,24 +1,33 @@
 #include "DNSLabMQTT.h"
 
-#if defined(ESP32)
 
-DNSLabMQTT* DNSLabMQTT::_instance = nullptr;
+DNSLabMQTT*
+DNSLabMQTT::_instance = nullptr;
+
+
+// ==================================================
+// CONSTRUCTOR
+// ==================================================
 
 DNSLabMQTT::DNSLabMQTT()
+#if defined(ESP32) || defined(ESP8266)
     : _wifiClient(),
       _mqttClient(_wifiClient),
-      _host("dnslab.link"),
+#else
+    : _mqttClient(),
+#endif
+      _host("mqtt.dnslab.ir"),
       _port(1883),
-      _tenantId(nullptr),
-      _deviceId(nullptr),
+      _tenantId(),
+      _deviceId(),
       _clientId(),
-      _messageCallback(nullptr),
-      _debug(true),
-      _mqttStarted(false),
+      _started(false),
       _subscriptionsRestored(false),
+      _debug(true),
       _lastConnectAttempt(0),
       _reconnectInterval(5000),
-      _subscriptions()
+      _subscriptions(),
+      _messageCallback(nullptr)
 {
     _instance = this;
 
@@ -29,23 +38,93 @@ DNSLabMQTT::DNSLabMQTT()
 
 
 // ==================================================
+// SERVER
+// ==================================================
+
+void DNSLabMQTT::setServer(
+    const char* host,
+    uint16_t port
+)
+{
+    if (!host)
+    {
+        return;
+    }
+
+    _host = host;
+
+    _port = port;
+
+    _mqttClient.setServer(
+        _host.c_str(),
+        _port
+    );
+}
+
+
+// ==================================================
 // BEGIN
 // ==================================================
 
-void DNSLabMQTT::begin()
+void DNSLabMQTT::begin(
+    const char* tenantId,
+    const char* deviceId
+)
 {
-    _mqttClient.setServer(
-        _host,
-        _port
-    );
+    if (!tenantId || !deviceId)
+    {
+        debug(
+            "[DNSLab] Invalid Tenant or Device ID"
+        );
+
+        return;
+    }
+
+    _tenantId =
+        tenantId;
+
+    _deviceId =
+        deviceId;
 
     generateClientId();
 
-    _mqttStarted = true;
+    _mqttClient.setServer(
+        _host.c_str(),
+        _port
+    );
+
+    _started = true;
 
     debug(
         "[DNSLab] MQTT initialized"
     );
+
+    if (_debug)
+    {
+        Serial.print(
+            "[DNSLab] Tenant: "
+        );
+
+        Serial.println(
+            _tenantId
+        );
+
+        Serial.print(
+            "[DNSLab] Device: "
+        );
+
+        Serial.println(
+            _deviceId
+        );
+
+        Serial.print(
+            "[DNSLab] Client ID: "
+        );
+
+        Serial.println(
+            _clientId
+        );
+    }
 }
 
 
@@ -55,19 +134,22 @@ void DNSLabMQTT::begin()
 
 void DNSLabMQTT::loop()
 {
-    if (!_mqttStarted)
+    if (!_started)
     {
         return;
     }
 
     if (WiFi.status() != WL_CONNECTED)
     {
+        _subscriptionsRestored = false;
+
         return;
     }
 
-    // --------------------------------
-    // MQTT disconnected
-    // --------------------------------
+
+    // -----------------------------
+    // Reconnect
+    // -----------------------------
 
     if (!_mqttClient.connected())
     {
@@ -87,21 +169,12 @@ void DNSLabMQTT::loop()
         return;
     }
 
-    // --------------------------------
-    // MQTT connected
-    // --------------------------------
+
+    // -----------------------------
+    // MQTT loop
+    // -----------------------------
 
     _mqttClient.loop();
-}
-
-
-// ==================================================
-// CONNECTED
-// ==================================================
-
-bool DNSLabMQTT::connected()
-{
-    return _mqttClient.connected();
 }
 
 
@@ -111,7 +184,7 @@ bool DNSLabMQTT::connected()
 
 bool DNSLabMQTT::connect()
 {
-    if (!_mqttStarted)
+    if (!_started)
     {
         return false;
     }
@@ -133,20 +206,18 @@ bool DNSLabMQTT::connect()
         "[DNSLab] Connecting to MQTT..."
     );
 
+
     bool result =
         _mqttClient.connect(
             _clientId.c_str()
         );
+
 
     if (result)
     {
         debug(
             "[DNSLab] MQTT connected"
         );
-
-        // --------------------------------
-        // Restore subscriptions
-        // --------------------------------
 
         restoreSubscriptions();
     }
@@ -169,48 +240,67 @@ bool DNSLabMQTT::connect()
 
 
 // ==================================================
-// TENANT ID
+// CONNECTED
 // ==================================================
 
-void DNSLabMQTT::setTenantId(
-    const char* tenantId
-)
+bool DNSLabMQTT::connected()
 {
-    _tenantId = tenantId;
-
-    if (_debug)
-    {
-        Serial.print(
-            "[DNSLab] Tenant: "
-        );
-
-        Serial.println(
-            _tenantId
-        );
-    }
+    return _mqttClient.connected();
 }
 
 
 // ==================================================
-// DEVICE ID
+// DISCONNECT
 // ==================================================
 
-void DNSLabMQTT::setDeviceId(
-    const char* deviceId
+void DNSLabMQTT::disconnect()
+{
+    _mqttClient.disconnect();
+
+    _subscriptionsRestored =
+        false;
+
+    debug(
+        "[DNSLab] MQTT disconnected"
+    );
+}
+
+// ==================================================
+// BUFFER SIZE
+// ==================================================
+
+void DNSLabMQTT::setBufferSize(
+    uint16_t size
 )
 {
-    _deviceId = deviceId;
+    if (size < 128)
+    {
+        size = 128;
+    }
 
-    generateClientId();
+    bool result =
+        _mqttClient.setBufferSize(
+            size
+        );
 
     if (_debug)
     {
         Serial.print(
-            "[DNSLab] Device: "
+            "[DNSLab] MQTT buffer size: "
+        );
+
+        Serial.print(
+            size
+        );
+
+        Serial.print(
+            " bytes -> "
         );
 
         Serial.println(
-            _deviceId
+            result
+                ? "OK"
+                : "FAILED"
         );
     }
 }
@@ -222,6 +312,9 @@ void DNSLabMQTT::setDeviceId(
 
 void DNSLabMQTT::generateClientId()
 {
+
+#if defined(ESP32)
+
     uint64_t chipId =
         ESP.getEfuseMac();
 
@@ -240,7 +333,32 @@ void DNSLabMQTT::generateClientId()
         low
     );
 
-    _clientId = buffer;
+    _clientId =
+        buffer;
+
+
+#elif defined(ESP8266)
+
+    char buffer[64];
+
+    snprintf(
+        buffer,
+        sizeof(buffer),
+        "DNSLab-%08X",
+        ESP.getChipId()
+    );
+
+    _clientId =
+        buffer;
+
+
+#else
+
+    _clientId =
+        "DNSLab-Client";
+
+#endif
+
 }
 
 
@@ -257,37 +375,37 @@ String DNSLabMQTT::buildTopic(
         return String();
     }
 
-    String finalTopic;
-
-    // --------------------------------
-    // SaaS namespace
-    // --------------------------------
-
     if (
-        _tenantId &&
-        _deviceId
+        _tenantId.length() == 0 ||
+        _deviceId.length() == 0
     )
     {
-        finalTopic += "tenant/";
-
-        finalTopic += _tenantId;
-
-        finalTopic += "/device/";
-
-        finalTopic += _deviceId;
-
-        finalTopic += "/";
-
-        finalTopic += topic;
-
-        return finalTopic;
+        return String(topic);
     }
 
-    // --------------------------------
-    // Fallback
-    // --------------------------------
 
-    return String(topic);
+    String finalTopic;
+
+    finalTopic +=
+        "tenant/";
+
+    finalTopic +=
+        _tenantId;
+
+    finalTopic +=
+        "/device/";
+
+    finalTopic +=
+        _deviceId;
+
+    finalTopic +=
+        "/";
+
+    finalTopic +=
+        topic;
+
+
+    return finalTopic;
 }
 
 
@@ -310,8 +428,10 @@ bool DNSLabMQTT::publish(
         return false;
     }
 
+
     String finalTopic =
         buildTopic(topic);
+
 
     if (_debug)
     {
@@ -324,11 +444,13 @@ bool DNSLabMQTT::publish(
         );
     }
 
+
     return _mqttClient.publish(
         finalTopic.c_str(),
         message
     );
 }
+
 
 bool DNSLabMQTT::publish(
     const char* topic,
@@ -355,9 +477,10 @@ bool DNSLabMQTT::subscribe(
         return false;
     }
 
-    // --------------------------------
+
+    // -----------------------------
     // Save subscription
-    // --------------------------------
+    // -----------------------------
 
     if (!subscriptionExists(topic))
     {
@@ -371,57 +494,58 @@ bool DNSLabMQTT::subscribe(
                 "[DNSLab] Subscription registered: "
             );
 
-            Serial.println(topic);
+            Serial.println(
+                topic
+            );
         }
     }
 
-    // --------------------------------
-    // MQTT not connected yet
-    //
-    // Do not fail.
-    // It will be restored automatically.
-    // --------------------------------
+
+    // -----------------------------
+    // MQTT not connected
+    // -----------------------------
 
     if (!_mqttClient.connected())
     {
         return true;
     }
 
-    // --------------------------------
+
+    // -----------------------------
     // Subscribe now
-    // --------------------------------
+    // -----------------------------
 
     String finalTopic =
         buildTopic(topic);
+
 
     bool result =
         _mqttClient.subscribe(
             finalTopic.c_str()
         );
 
+
     if (_debug)
     {
-        if (result)
-        {
-            Serial.print(
-                "[DNSLab] Subscribed: "
-            );
+        Serial.print(
+            "[DNSLab] Subscribe: "
+        );
 
-            Serial.println(
-                finalTopic
-            );
-        }
-        else
-        {
-            Serial.print(
-                "[DNSLab] Subscribe failed: "
-            );
+        Serial.print(
+            finalTopic
+        );
 
-            Serial.println(
-                finalTopic
-            );
-        }
+        Serial.print(
+            " -> "
+        );
+
+        Serial.println(
+            result
+                ? "OK"
+                : "FAILED"
+        );
     }
+
 
     return result;
 }
@@ -440,53 +564,49 @@ bool DNSLabMQTT::unsubscribe(
         return false;
     }
 
-    String finalTopic =
-        buildTopic(topic);
 
-    // --------------------------------
-    // Remove from local list
-    // --------------------------------
+    // -----------------------------
+    // Remove local subscription
+    // -----------------------------
 
     for (
-        auto it = _subscriptions.begin();
-        it != _subscriptions.end();
+        auto it =
+            _subscriptions.begin();
+
+        it !=
+            _subscriptions.end();
+
         ++it
     )
     {
         if (*it == topic)
         {
-            _subscriptions.erase(it);
+            _subscriptions.erase(
+                it
+            );
 
             break;
         }
     }
 
-    // --------------------------------
-    // MQTT unsubscribe
-    // --------------------------------
+
+    // -----------------------------
+    // MQTT
+    // -----------------------------
 
     if (!_mqttClient.connected())
     {
         return true;
     }
 
-    bool result =
-        _mqttClient.unsubscribe(
-            finalTopic.c_str()
-        );
 
-    if (_debug)
-    {
-        Serial.print(
-            "[DNSLab] Unsubscribed: "
-        );
+    String finalTopic =
+        buildTopic(topic);
 
-        Serial.println(
-            finalTopic
-        );
-    }
 
-    return result;
+    return _mqttClient.unsubscribe(
+        finalTopic.c_str()
+    );
 }
 
 
@@ -499,11 +619,11 @@ bool DNSLabMQTT::subscriptionExists(
 )
 {
     for (
-        const String& subscription :
+        const String& item :
         _subscriptions
     )
     {
-        if (subscription == topic)
+        if (item == topic)
         {
             return true;
         }
@@ -524,16 +644,10 @@ void DNSLabMQTT::restoreSubscriptions()
         return;
     }
 
-    if (_subscriptionsRestored)
-    {
-        return;
-    }
 
-    debug(
-        "[DNSLab] Restoring subscriptions..."
-    );
+    bool allSuccessful =
+        true;
 
-    bool allSuccessful = true;
 
     for (
         const String& topic :
@@ -545,47 +659,45 @@ void DNSLabMQTT::restoreSubscriptions()
                 topic.c_str()
             );
 
+
         bool result =
             _mqttClient.subscribe(
                 finalTopic.c_str()
             );
 
+
         if (_debug)
         {
-            if (result)
-            {
-                Serial.print(
-                    "[DNSLab] Subscribed: "
-                );
+            Serial.print(
+                "[DNSLab] Subscribed: "
+            );
 
-                Serial.println(
-                    finalTopic
-                );
-            }
-            else
-            {
-                Serial.print(
-                    "[DNSLab] Subscribe failed: "
-                );
+            Serial.print(
+                finalTopic
+            );
 
-                Serial.println(
-                    finalTopic
-                );
+            Serial.print(
+                " -> "
+            );
 
-                allSuccessful = false;
-            }
+            Serial.println(
+                result
+                    ? "OK"
+                    : "FAILED"
+            );
+        }
+
+
+        if (!result)
+        {
+            allSuccessful =
+                false;
         }
     }
 
+
     _subscriptionsRestored =
         allSuccessful;
-
-    if (_subscriptionsRestored)
-    {
-        debug(
-            "[DNSLab] All subscriptions restored"
-        );
-    }
 }
 
 
@@ -638,9 +750,13 @@ void DNSLabMQTT::handleMessage(
         return;
     }
 
+
     String message;
 
-    message.reserve(length);
+    message.reserve(
+        length
+    );
+
 
     for (
         unsigned int i = 0;
@@ -651,6 +767,7 @@ void DNSLabMQTT::handleMessage(
         message +=
             (char)payload[i];
     }
+
 
     _messageCallback(
         topic,
@@ -667,13 +784,16 @@ void DNSLabMQTT::setDebug(
     bool enabled
 )
 {
-    _debug = enabled;
+    _debug =
+        enabled;
 }
+
 
 bool DNSLabMQTT::debugEnabled()
 {
     return _debug;
 }
+
 
 void DNSLabMQTT::debug(
     const char* message
@@ -684,11 +804,7 @@ void DNSLabMQTT::debug(
         return;
     }
 
-    Serial.println(message);
+    Serial.println(
+        message
+    );
 }
-
-#else
-
-#error "DNSLab currently supports ESP32 only."
-
-#endif
