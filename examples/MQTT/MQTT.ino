@@ -15,7 +15,7 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 // MQTT
 // ==================================================
 
-const char* TENANT_ID = "Project1";
+const char* PROJECT_ID = "Project1";
 const char* DEVICE_ID = "Device456";
 
 
@@ -60,7 +60,7 @@ void setup()
     // ==================================================
 
     dnslab.MQTT.begin(
-        TENANT_ID,
+        PROJECT_ID,
         DEVICE_ID
     );
 

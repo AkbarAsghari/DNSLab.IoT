@@ -6,7 +6,7 @@ DNSLab.IoT provides a simple API for:
 
 * WiFi connection
 * MQTT connection
-* Tenant & Device identification
+* Project & Device identification
 * Publish
 * Subscribe
 * Message callbacks
@@ -25,7 +25,7 @@ DNSLab.IoT provides a simple API for:
 * MQTT management
 * Automatic MQTT reconnect
 * Automatic subscription restore
-* Tenant-based MQTT namespace
+* Project-based MQTT namespace
 * Device-based MQTT namespace
 * Publish messages
 * Subscribe to topics
@@ -202,7 +202,7 @@ if (dnslab.Wifi.connected())
 
 # MQTT
 
-Initialize MQTT with a Tenant ID and Device ID:
+Initialize MQTT with a Project ID and Device ID:
 
 ```
 dnslab.MQTT.begin(
@@ -213,13 +213,13 @@ dnslab.MQTT.begin(
 
 The parameters are:
 
-* Tenant ID
+* Project ID
 * Device ID
 
 Example:
 
 ```
-Tenant: Project1
+Project: Project1
 Device: Device456
 ```
 
@@ -240,7 +240,7 @@ dnslab.MQTT.subscribe(
 the actual MQTT topic becomes:
 
 ```
-tenant/Project1/device/Device456/Notification
+project/Project1/device/Device456/Notification
 ```
 
 The user does not need to manually construct the full topic.
@@ -349,7 +349,7 @@ dnslab.MQTT.publish(
 The actual topic becomes:
 
 ```
-tenant/Project1/device/Device456/Notification
+project/Project1/device/Device456/Notification
 ```
 
 ---
@@ -495,12 +495,12 @@ Example debug output:
 
 ```
 [DNSLab] MQTT initialized
-[DNSLab] Tenant: Project1
+[DNSLab] Project: Project1
 [DNSLab] Device: Device456
 [DNSLab] Client ID: DNSLab-XXXXXXXX
 [DNSLab] Connecting to MQTT...
 [DNSLab] MQTT connected
-[DNSLab] Subscribed: tenant/Project1/device/Device456/Notification -> OK
+[DNSLab] Subscribed: project/Project1/device/Device456/Notification -> OK
 ```
 
 ---
@@ -538,7 +538,7 @@ const char* WIFI_SSID =
 const char* WIFI_PASSWORD =
     "YOUR_WIFI_PASSWORD";
 
-const char* TENANT_ID =
+const char* PROJECT_ID =
     "Project1";
 
 const char* DEVICE_ID =
@@ -571,7 +571,7 @@ void setup()
     // MQTT
 
     dnslab.MQTT.begin(
-        TENANT_ID,
+        PROJECT_ID,
         DEVICE_ID
     );
 
@@ -645,7 +645,7 @@ DNSLab
  │
  └── MQTT
         ├── MQTT connection
-        ├── Tenant
+        ├── Project
         ├── Device
         ├── Publish
         ├── Subscribe
@@ -661,16 +661,16 @@ DNSLab
 DNSLab.IoT uses the following namespace:
 
 ```
-tenant/{TenantId}/device/{DeviceId}/{Topic}
+project/{ProjectId}/device/{DeviceId}/{Topic}
 ```
 
 Example:
 
 ```
-tenant/Project1/device/Device456/Notification
+project/Project1/device/Device456/Notification
 ```
 
-This allows multiple tenants and devices to use the same MQTT Hub while maintaining separate device namespaces.
+This allows multiple projects and devices to use the same MQTT Hub while maintaining separate device namespaces.
 
 ---
 
@@ -736,7 +736,7 @@ DNSLab IoT Library
    ▼
 DNSLab MQTT Hub
    │
-   ├── Tenant
+   ├── Project
    │
    ├── Device
    │

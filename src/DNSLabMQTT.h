@@ -66,7 +66,7 @@ public:
     // ==================================================
 
     void begin(
-        const char* tenantId,
+        const char* projectId,
         const char* deviceId
     );
 
@@ -174,7 +174,7 @@ private:
     // DEVICE
     // ==================================================
 
-    String _tenantId;
+    String _projectId;
 
     String _deviceId;
 

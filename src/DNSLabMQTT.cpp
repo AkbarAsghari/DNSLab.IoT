@@ -18,7 +18,7 @@ DNSLabMQTT::DNSLabMQTT()
 #endif
       _host("mqtt.dnslab.ir"),
       _port(8883),
-      _tenantId(),
+      _projectId(),
       _deviceId(),
       _clientId(),
       _started(false),
@@ -74,20 +74,20 @@ void DNSLabMQTT::setServer(
 // ==================================================
 
 void DNSLabMQTT::begin(
-    const char* tenantId,
+    const char* projectId,
     const char* deviceId
 )
 {
-    if (!tenantId || !deviceId)
+    if (!projectId || !deviceId)
     {
         debug(
-            "[DNSLab] Invalid Tenant or Device ID"
+            "[DNSLab] Invalid Project or Device ID"
         );
 
         return;
     }
 
-    _tenantId = tenantId;
+    _projectId = projectId;
     _deviceId = deviceId;
 
     generateClientId();
@@ -106,11 +106,11 @@ void DNSLabMQTT::begin(
     if (_debug)
     {
         Serial.print(
-            "[DNSLab] Tenant: "
+            "[DNSLab] Project: "
         );
 
         Serial.println(
-            _tenantId
+            _projectId
         );
 
         Serial.print(
@@ -134,7 +134,7 @@ void DNSLabMQTT::begin(
         );
 
         Serial.println(
-            _tenantId
+            _projectId
         );
     }
 }
@@ -222,14 +222,14 @@ bool DNSLabMQTT::connect()
     // ==================================================
     // MQTT CREDENTIALS
     //
-    // Username = Tenant ID
+    // Username = Project ID
     // Password = Empty
     // ==================================================
 
     bool result =
         _mqttClient.connect(
             _clientId.c_str(),
-            _tenantId.c_str(),
+            _projectId.c_str(),
             ""
         );
 
@@ -247,7 +247,7 @@ bool DNSLabMQTT::connect()
             );
 
             Serial.println(
-                _tenantId
+                _projectId
             );
         }
 
@@ -409,7 +409,7 @@ String DNSLabMQTT::buildTopic(
     }
 
     if (
-        _tenantId.length() == 0 ||
+        _projectId.length() == 0 ||
         _deviceId.length() == 0
     )
     {
@@ -420,10 +420,10 @@ String DNSLabMQTT::buildTopic(
     String finalTopic;
 
     finalTopic +=
-        "tenant/";
+        "project/";
 
     finalTopic +=
-        _tenantId;
+        _projectId;
 
     finalTopic +=
         "/device/";
