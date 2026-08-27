@@ -52,7 +52,6 @@ void DNSLabMQTT::setServer(
     }
 
     _host = host;
-
     _port = port;
 
     _mqttClient.setServer(
@@ -80,11 +79,8 @@ void DNSLabMQTT::begin(
         return;
     }
 
-    _tenantId =
-        tenantId;
-
-    _deviceId =
-        deviceId;
+    _tenantId = tenantId;
+    _deviceId = deviceId;
 
     generateClientId();
 
@@ -123,6 +119,14 @@ void DNSLabMQTT::begin(
 
         Serial.println(
             _clientId
+        );
+
+        Serial.print(
+            "[DNSLab] MQTT Username: "
+        );
+
+        Serial.println(
+            _tenantId
         );
     }
 }
@@ -207,9 +211,18 @@ bool DNSLabMQTT::connect()
     );
 
 
+    // ==================================================
+    // MQTT CREDENTIALS
+    //
+    // Username = Tenant ID
+    // Password = Empty
+    // ==================================================
+
     bool result =
         _mqttClient.connect(
-            _clientId.c_str()
+            _clientId.c_str(),
+            _tenantId.c_str(),
+            ""
         );
 
 
@@ -218,6 +231,17 @@ bool DNSLabMQTT::connect()
         debug(
             "[DNSLab] MQTT connected"
         );
+
+        if (_debug)
+        {
+            Serial.print(
+                "[DNSLab] MQTT Username: "
+            );
+
+            Serial.println(
+                _tenantId
+            );
+        }
 
         restoreSubscriptions();
     }
@@ -264,6 +288,7 @@ void DNSLabMQTT::disconnect()
         "[DNSLab] MQTT disconnected"
     );
 }
+
 
 // ==================================================
 // BUFFER SIZE
@@ -451,6 +476,10 @@ bool DNSLabMQTT::publish(
     );
 }
 
+
+// ==================================================
+// PUBLISH STRING
+// ==================================================
 
 bool DNSLabMQTT::publish(
     const char* topic,
