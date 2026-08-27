@@ -6,29 +6,21 @@ DNSLab::DNSLab()
     : mqtt(),
       _wifiSSID(nullptr),
       _wifiPassword(nullptr),
-      _mqttHost(nullptr),
-      _mqttPort(1883),
-      _debug(false),
       _wifiStarted(false),
       _lastWiFiAttempt(0),
-      _wifiRetryInterval(5000) {
+      _wifiRetryInterval(5000)
+{
 }
 
 bool DNSLab::begin(
     const char* wifiSSID,
     const char* wifiPassword,
-    const char* mqttHost,
-    uint16_t mqttPort
-) {
-
-    _wifiSSID = wifiSSID;
-    _wifiPassword = wifiPassword;
-
-    _mqttHost = mqttHost;
-    _mqttPort = mqttPort;
-
-    if (!_wifiSSID || !_wifiPassword) {
-
+    const char* tenantId,
+    const char* deviceId
+)
+{
+    if (!wifiSSID || !wifiPassword)
+    {
         printDebug(
             "[DNSLab] Invalid WiFi credentials"
         );
@@ -36,67 +28,56 @@ bool DNSLab::begin(
         return false;
     }
 
-    printDebug(
-        "[DNSLab] Starting..."
-    );
+    if (!tenantId || !deviceId)
+    {
+        printDebug(
+            "[DNSLab] Invalid Tenant ID or Device ID"
+        );
 
-    WiFi.mode(WIFI_STA);
+        return false;
+    }
 
-    connectWiFi();
+    _wifiSSID = wifiSSID;
+    _wifiPassword = wifiPassword;
 
-    mqtt.begin(
-        _mqttHost,
-        _mqttPort
-    );
+    // --------------------------------
+    // Configure MQTT identity
+    // --------------------------------
 
-    return true;
-}
-
-void DNSLab::loop() {
+    mqtt.setTenantId(tenantId);
+    mqtt.setDeviceId(deviceId);
 
     // --------------------------------
     // WiFi
     // --------------------------------
 
-    if (WiFi.status() != WL_CONNECTED) {
+    WiFi.mode(WIFI_STA);
 
-        unsigned long now = millis();
+    connectWiFi();
 
-        if (
-            !_wifiStarted ||
-            now - _lastWiFiAttempt >= _wifiRetryInterval
-        ) {
+    // --------------------------------
+    // MQTT
+    // --------------------------------
 
-            connectWiFi();
-        }
+    mqtt.begin();
+
+    return true;
+}
+
+void DNSLab::loop()
+{
+    wl_status_t wifiStatus =
+        WiFi.status();
+
+    // --------------------------------
+    // WiFi disconnected
+    // --------------------------------
+
+    if (wifiStatus != WL_CONNECTED)
+    {
+        connectWiFi();
 
         return;
-    }
-
-    // --------------------------------
-    // WiFi Connected
-    // --------------------------------
-
-    static bool wasConnected = false;
-
-    if (!wasConnected) {
-
-        wasConnected = true;
-
-        printDebug(
-            "[DNSLab] WiFi connected"
-        );
-
-        if (_debug) {
-
-            Serial.print(
-                "[DNSLab] IP: "
-            );
-
-            Serial.println(
-                WiFi.localIP()
-            );
-        }
     }
 
     // --------------------------------
@@ -106,38 +87,43 @@ void DNSLab::loop() {
     mqtt.loop();
 }
 
-void DNSLab::connectWiFi() {
-
-    if (!_wifiSSID || !_wifiPassword) {
-        return;
-    }
+void DNSLab::connectWiFi()
+{
+    wl_status_t status =
+        WiFi.status();
 
     // Already connected
-    if (WiFi.status() == WL_CONNECTED) {
+    if (status == WL_CONNECTED)
+    {
         return;
     }
 
     // --------------------------------
-    // IMPORTANT
-    // Don't call WiFi.begin() while
-    // ESP32 is already connecting.
+    // ESP32 is already trying to connect
     // --------------------------------
 
-    if (_wifiStarted) {
-
-        wl_status_t status = WiFi.status();
-
-        if (
-            status != WL_NO_SSID_AVAIL &&
-            status != WL_CONNECT_FAILED &&
-            status != WL_DISCONNECTED
-        ) {
-
-            return;
-        }
+    if (
+        status == WL_IDLE_STATUS ||
+        status == WL_NO_SSID_AVAIL ||
+        status == WL_SCAN_COMPLETED
+    )
+    {
+        return;
     }
 
-    _lastWiFiAttempt = millis();
+    unsigned long now =
+        millis();
+
+    if (
+        _wifiStarted &&
+        now - _lastWiFiAttempt <
+        _wifiRetryInterval
+    )
+    {
+        return;
+    }
+
+    _lastWiFiAttempt = now;
 
     printDebug(
         "[DNSLab] Connecting to WiFi..."
@@ -151,43 +137,44 @@ void DNSLab::connectWiFi() {
     _wifiStarted = true;
 }
 
-bool DNSLab::connected() {
-
+bool DNSLab::connected()
+{
     return
-        WiFi.status() == WL_CONNECTED &&
+        wifiConnected() &&
         mqtt.connected();
 }
 
-bool DNSLab::wifiConnected() {
-
+bool DNSLab::wifiConnected()
+{
     return WiFi.status() == WL_CONNECTED;
 }
 
-void DNSLab::disconnect() {
-
-    printDebug(
-        "[DNSLab] Disconnecting..."
-    );
-
+void DNSLab::disconnect()
+{
     mqtt.disconnect();
 
-    WiFi.disconnect(true);
+    WiFi.disconnect(false);
 
     _wifiStarted = false;
+
+    printDebug(
+        "[DNSLab] Disconnected"
+    );
 }
 
-void DNSLab::setDebug(bool enabled) {
-
-    _debug = enabled;
-
+void DNSLab::setDebug(
+    bool enabled
+)
+{
     mqtt.setDebug(enabled);
 }
 
 void DNSLab::printDebug(
     const char* message
-) {
-
-    if (!_debug) {
+)
+{
+    if (!mqtt.debugEnabled())
+    {
         return;
     }
 

@@ -3,9 +3,11 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+
 #include "DNSLabMQTT.h"
 
-class DNSLab {
+class DNSLab
+{
 public:
 
     DNSLab();
@@ -13,8 +15,8 @@ public:
     bool begin(
         const char* wifiSSID,
         const char* wifiPassword,
-        const char* mqttHost = "dnslab.link",
-        uint16_t mqttPort = 1883
+        const char* tenantId,
+        const char* deviceId
     );
 
     void loop();
@@ -34,19 +36,17 @@ private:
     const char* _wifiSSID;
     const char* _wifiPassword;
 
-    const char* _mqttHost;
-    uint16_t _mqttPort;
-
-    bool _debug;
-
     bool _wifiStarted;
 
     unsigned long _lastWiFiAttempt;
+
     unsigned long _wifiRetryInterval;
 
     void connectWiFi();
 
-    void printDebug(const char* message);
+    void printDebug(
+        const char* message
+    );
 };
 
 #endif

@@ -6,9 +6,10 @@
 #include <PubSubClient.h>
 
 #include <functional>
+#include <vector>
 
-class DNSLabMQTT {
-
+class DNSLabMQTT
+{
 public:
 
     using MessageCallback =
@@ -21,10 +22,7 @@ public:
 
     DNSLabMQTT();
 
-    void begin(
-        const char* host,
-        uint16_t port = 1883
-    );
+    void begin();
 
     void loop();
 
@@ -33,6 +31,10 @@ public:
     bool connect();
 
     void disconnect();
+
+    // --------------------------------
+    // Publish
+    // --------------------------------
 
     bool publish(
         const char* topic,
@@ -44,6 +46,10 @@ public:
         const String& message
     );
 
+    // --------------------------------
+    // Subscribe
+    // --------------------------------
+
     bool subscribe(
         const char* topic
     );
@@ -52,22 +58,41 @@ public:
         const char* topic
     );
 
+    // --------------------------------
+    // Callback
+    // --------------------------------
+
     void onMessage(
         MessageCallback callback
     );
 
-    void setCredentials(
-        const char* username,
-        const char* password
+    // --------------------------------
+    // Debug
+    // --------------------------------
+
+    void setDebug(
+        bool enabled
     );
 
-    void setClientId(
-        const char* clientId
+    bool debugEnabled();
+
+    // --------------------------------
+    // Identity
+    // --------------------------------
+
+    void setTenantId(
+        const char* tenantId
     );
 
-    void setDebug(bool enabled);
+    void setDeviceId(
+        const char* deviceId
+    );
 
 private:
+
+    // --------------------------------
+    // MQTT
+    // --------------------------------
 
     WiFiClient _wifiClient;
 
@@ -77,21 +102,55 @@ private:
 
     uint16_t _port;
 
-    const char* _username;
+    // --------------------------------
+    // Identity
+    // --------------------------------
 
-    const char* _password;
+    const char* _tenantId;
 
-    const char* _clientId;
+    const char* _deviceId;
+
+    String _clientId;
+
+    // --------------------------------
+    // Callback
+    // --------------------------------
 
     MessageCallback _messageCallback;
 
+    // --------------------------------
+    // Debug
+    // --------------------------------
+
     bool _debug;
+
+    // --------------------------------
+    // State
+    // --------------------------------
+
+    bool _mqttStarted;
+
+    bool _subscriptionsRestored;
 
     unsigned long _lastConnectAttempt;
 
     unsigned long _reconnectInterval;
 
+    // --------------------------------
+    // Subscriptions
+    // --------------------------------
+
+    std::vector<String> _subscriptions;
+
+    // --------------------------------
+    // Singleton callback
+    // --------------------------------
+
     static DNSLabMQTT* _instance;
+
+    // --------------------------------
+    // MQTT callback
+    // --------------------------------
 
     static void mqttCallback(
         char* topic,
@@ -104,6 +163,34 @@ private:
         byte* payload,
         unsigned int length
     );
+
+    // --------------------------------
+    // Topic
+    // --------------------------------
+
+    String buildTopic(
+        const char* topic
+    );
+
+    // --------------------------------
+    // Subscription manager
+    // --------------------------------
+
+    void restoreSubscriptions();
+
+    bool subscriptionExists(
+        const char* topic
+    );
+
+    // --------------------------------
+    // Client ID
+    // --------------------------------
+
+    void generateClientId();
+
+    // --------------------------------
+    // Debug
+    // --------------------------------
 
     void debug(
         const char* message
