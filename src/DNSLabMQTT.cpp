@@ -788,10 +788,53 @@ void DNSLabMQTT::handleMessage(
     }
 
 
+    // ==================================================
+    // Find Local Subscription
+    // ==================================================
+
+    String fullTopic = topic;
+
+    String localTopic;
+
+
+    for (
+        const String& subscription :
+        _subscriptions
+    )
+    {
+        String subscribedTopic =
+            buildTopic(
+                subscription.c_str()
+            );
+
+
+        if (fullTopic == subscribedTopic)
+        {
+            localTopic = subscription;
+
+            break;
+        }
+    }
+
+
+    // ==================================================
+    // If Topic Was Not Found
+    // ==================================================
+
+    if (localTopic.length() == 0)
+    {
+        return;
+    }
+
+
+    // ==================================================
+    // Build Message
+    // ==================================================
+
     String message;
 
     message.reserve(
-        length
+        length + 1
     );
 
 
@@ -806,8 +849,12 @@ void DNSLabMQTT::handleMessage(
     }
 
 
+    // ==================================================
+    // Callback
+    // ==================================================
+
     _messageCallback(
-        topic,
+        localTopic.c_str(),
         message.c_str()
     );
 }
